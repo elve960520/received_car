@@ -19,27 +19,11 @@ sbit    action    =P2^7;				//风扇控制接口
 uchar rece_buf[32];							//接收寄存器
 							//a0=37:最大角度，脉宽1.899ms
 
-uchar temp_time = 0;
-sbit pwm_out = P0^0;
-sbit pwm_out_part1 = P0^1;
-sbit pwm_out_part2 = P0^2;
-uchar set_speed = 0;
-
 void delay(uint t)
 {
 	uint a,b;
 	for(a=0;a<t;a++)
 		for (b=0;b<255;b++);
-}
-
-void system_Init()
-{
-	TMOD=0x01; 
-	TH0=(65535 - 10) / 256; 
-	TL0=(65535 - 10) % 256;
-	TR0=1; 
-	ET0=1; 
-	EA=1; 
 }
 
 void main()
@@ -48,8 +32,6 @@ void main()
 	LED1=1;
 	LED2=1;
 	LED3=1;
-	set_speed = 0;
-	system_Init();
 	while(NRF24L01_Check());                    //等待检测到NRF24L01，程序才会向下执行
 	NRF24L01_RT_Init(TX_PLOAD_WIDTH,TX_ADDRESS,TX_ADR_WIDTH,RX_ADDRESS,RX_ADR_WIDTH,rate);			
 
@@ -59,49 +41,127 @@ void main()
 			LED1=~LED1;
 		}
 	LED1=1;
-	pwm_out_part1 = 1;
-	pwm_out_part2 = 0;
+				
 
 	while(1)
 	{
-		if(temp_time > 100)
-		{
-			temp_time = 0;		
-		}
+ 
 		if(NRF_IRQ==0)	 	// 如果无线模块接收到数据
 		{		
 			
 			if(NRF24L01_RxPacket(rece_buf)==0)
 			{	
-				if(rece_buf[0]==1)
+				if(rece_buf[1]=='1')		   	//前进--第1位以后是收到的命令数据，rece_buf[0]是数据位数长度
 				{
-					LED1=1;  
+					LED1=1;
 					LED2=0;
 					LED3=1;
-					set_speed = rece_buf[1];
+					L1	=0;
+					L2	=1;
+					R1	=0;
+					R2	=1;
 				}
-			} 
+				else if(rece_buf[1]=='b')	 		//后退--第1位以后是收到的命令数据，rece_buf[0]是数据位数长度
+				{
+					LED1=0;
+					LED2=1;
+					LED3=1;
+					L1	=1;
+					L2	=0;
+					R1	=1;
+					R2	=0;
+				}
+				else if(rece_buf[1]=='3')	 		//左--第1位以后是收到的命令数据，rece_buf[0]是数据位数长度
+				{
+					LED1=1;
+					LED2=1;
+					LED3=0;
+					L1	=1;
+					L2	=0;
+					R1	=0;
+					R2	=1;
+				}	
+				else if(rece_buf[1]=='4')	 		//右--第1位以后是收到的命令数据，rece_buf[0]是数据位数长度
+				{
+					LED1=0;
+					LED2=1;
+					LED3=0;
+					L1  =0;
+					L2	=1;
+					R1	=1;
+					R2	=0;
+				}
+
+				else if(rece_buf[1]=='5')			//左前
+				{
+					LED1=1;
+					LED2=0;
+					LED3=0;
+					L1	=0;
+					L2	=0;
+					R1	=0;
+					R2	=1;
+				}
+				else if(rece_buf[1]=='6')
+				{									//右前
+					LED1=0;
+					LED2=0;
+					LED3=0;
+					L1	=0;
+					L2	=1;
+					R1	=0;
+					R2	=0;
+				}
+				else if(rece_buf[1]=='7')
+				{									//左后
+					LED1=1;
+					LED2=0;
+					LED3=0;
+					L1	=0;
+					L2	=0;
+					R1	=1;
+					R2	=0;
+				}
+				else if(rece_buf[1]=='8')
+				{									//右后
+					LED1=0;
+					LED2=0;
+					LED3=0;
+					L1	=1;
+					L2	=0;
+					R1	=0;
+					R2	=0;
+				}
+				if(rece_buf[1]=='9')
+				{									//风扇
+					LED1=0;
+					LED2=1;
+					LED3=1;
+					L1	=0;
+					L2	=0;
+					R1	=0;
+					R2	=0;
+					action2=1;
+					action=1;
+				}
+				delay(5);
+			}
 		}
 		else 	
-		{										   
+		{										   //停止
 					LED1=0;
 					LED2=0;
 					LED3=1;
+					L1	=0;
+					L2	=0;
+					R1	=0;
+					R2	=0;
+					action2=0;
+					action=0;
 		}
-		if(temp_time <= set_speed)
-		pwm_out = 1;
-		else pwm_out = 0;
 
 //**************************************		
 	}
-}
-
-void timer0() interrupt 1 
-{
-	TH0=(65535 - 10) / 256; 
-	TL0=(65535 - 10) % 256;
-	temp_time++;
-	
 }
 
 
